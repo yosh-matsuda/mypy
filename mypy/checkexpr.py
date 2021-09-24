@@ -3720,7 +3720,7 @@ class ExpressionChecker(ExpressionVisitor[Type]):
         return type_type, instance_type
 
     def visit_slice_expr(self, e: SliceExpr) -> Type:
-        expected = make_optional_type(self.named_type('builtins.int'))
+        expected = make_optional_type(self.named_type('typing.SupportsIndex'))
         for index in [e.begin_index, e.end_index, e.stride]:
             if index:
                 t = self.accept(index)
