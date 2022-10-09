@@ -163,13 +163,14 @@ class DocStringParser:
                 self.arg_type = self.accumulator
                 self.state.pop()
             elif self.state[-1] == STATE_ARGUMENT_LIST:
-                self.arg_name = self.accumulator
-                if not (
-                    token.string == ")" and self.accumulator.strip() == ""
-                ) and not _ARG_NAME_RE.match(self.arg_name):
-                    # Invalid argument name.
-                    self.reset()
-                    return
+                if not self.accumulator == "/":
+                    self.arg_name = self.accumulator
+                    if not (
+                        token.string == ")" and self.accumulator.strip() == ""
+                    ) and not _ARG_NAME_RE.match(self.arg_name):
+                        # Invalid argument name.
+                        self.reset()
+                        return
 
             if token.string == ")":
                 self.state.pop()
@@ -294,7 +295,7 @@ def infer_ret_type_sig_from_docstring(docstr: str, name: str) -> str | None:
 
 def infer_ret_type_sig_from_anon_docstring(docstr: str) -> str | None:
     """Convert signature in form of "(self: TestClass, arg0) -> int" to their return type."""
-    return infer_ret_type_sig_from_docstring("stub" + docstr.strip(), "stub")
+    return infer_ret_type_sig_from_docstring("stub" + docstr.strip().lstrip("<anonymous>"), "stub")
 
 
 def parse_signature(sig: str) -> tuple[str, list[str], list[str]] | None:

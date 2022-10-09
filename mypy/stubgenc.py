@@ -39,6 +39,7 @@ _DEFAULT_TYPING_IMPORTS: Final = (
     "Optional",
     "Tuple",
     "Union",
+    "Sequence",
 )
 
 
@@ -172,7 +173,7 @@ def generate_stub_for_c_module(
     done = set()
     items = sorted(module.__dict__.items(), key=lambda x: x[0])
     for name, obj in items:
-        if is_c_function(obj):
+        if is_c_function(obj) or type(obj).__name__ == "nb_func":
             generate_c_function_stub(
                 module,
                 name,
