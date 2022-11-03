@@ -289,7 +289,7 @@ def generate_c_function_stub(
     'class_sigs'.
     """
     inferred: list[FunctionSig] | None = None
-    docstr: str | None = None
+    docstr: str | None = getattr(obj, "__doc__", None)
     if class_name:
         # method:
         assert self_var is not None, "self_var should be provided for methods"
@@ -341,6 +341,9 @@ def generate_c_function_stub(
                 output.append("@overload")
             if is_classmethod:
                 output.append("@classmethod")
+            if include_docstrings and docstr:
+                docstring_body = docstr.strip().split("\n\n", 1)
+                docstr = docstring_body[1] if len(docstring_body) > 1 else None
             if include_docstrings and docstr:
                 output.append(
                     "def {function}({args}) -> {ret}:".format(
