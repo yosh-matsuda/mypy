@@ -15,6 +15,7 @@ from types import ModuleType
 from typing import Any, Iterable, Mapping
 from typing_extensions import Final
 
+import mypy.util
 from mypy.moduleinspect import is_c_module
 from mypy.stubdoc import (
     ArgSig,
@@ -145,7 +146,10 @@ class FallbackSignatureGenerator(SignatureGenerator):
 
 
 def generate_stub_for_c_module(
-    module_name: str, target: str, sig_generators: Iterable[SignatureGenerator]
+    module_name: str,
+    target: str,
+    sig_generators: Iterable[SignatureGenerator],
+    include_docstrings: bool = False,
 ) -> None:
     """Generate stub for C module.
 
@@ -171,7 +175,13 @@ def generate_stub_for_c_module(
     for name, obj in items:
         if is_c_function(obj) or is_nanobind_function(obj):
             generate_c_function_stub(
-                module, name, obj, functions, imports=imports, sig_generators=sig_generators
+                module,
+                name,
+                obj,
+                functions,
+                imports=imports,
+                sig_generators=sig_generators,
+                include_docstrings=include_docstrings,
             )
             done.add(name)
     types: list[str] = []
@@ -180,7 +190,13 @@ def generate_stub_for_c_module(
             continue
         if is_c_type(obj):
             generate_c_type_stub(
-                module, name, obj, types, imports=imports, sig_generators=sig_generators
+                module,
+                name,
+                obj,
+                types,
+                imports=imports,
+                sig_generators=sig_generators,
+                include_docstrings=include_docstrings,
             )
             done.add(name)
     variables = []
@@ -271,15 +287,17 @@ def generate_c_function_stub(
     sig_generators: Iterable[SignatureGenerator],
     self_var: str | None = None,
     class_name: str | None = None,
+    include_docstrings: bool = False,
 ) -> None:
     """Generate stub for a single function or method.
 
-    The result (always a single line) will be appended to 'output'.
+    The result will be appended to 'output'.
     If necessary, any required names will be added to 'imports'.
     The 'class_name' is used to find signature of __init__ or __new__ in
     'class_sigs'.
     """
     inferred: list[FunctionSig] | None = None
+    docstr: str | None = None
     if class_name:
         # method:
         assert self_var is not None, "self_var should be provided for methods"
@@ -331,13 +349,25 @@ def generate_c_function_stub(
                 output.append("@overload")
             if is_classmethod:
                 output.append("@classmethod")
-            output.append(
-                "def {function}({args}) -> {ret}: ...".format(
-                    function=name,
-                    args=", ".join(args),
-                    ret=strip_or_import(signature.ret_type, module, imports),
+            if include_docstrings and docstr:
+                output.append(
+                    "def {function}({args}) -> {ret}:".format(
+                        function=name,
+                        args=", ".join(args),
+                        ret=strip_or_import(signature.ret_type, module, imports),
+                    )
                 )
-            )
+                docstr_quoted = mypy.util.quote_docstring(docstr.strip())
+                docstr_indented = "\n    ".join(docstr_quoted.split("\n"))
+                output.extend(f"    {docstr_indented}".split("\n"))
+            else:
+                output.append(
+                    "def {function}({args}) -> {ret}: ...".format(
+                        function=name,
+                        args=", ".join(args),
+                        ret=strip_or_import(signature.ret_type, module, imports),
+                    )
+                )
 
 
 def strip_or_import(typ: str, module: ModuleType, imports: list[str]) -> str:
@@ -433,6 +463,7 @@ def generate_c_type_stub(
     output: list[str],
     imports: list[str],
     sig_generators: Iterable[SignatureGenerator],
+    include_docstrings: bool = False,
 ) -> None:
     """Generate stub for a single class using runtime introspection.
 
@@ -474,6 +505,7 @@ def generate_c_type_stub(
                     self_var=self_var,
                     class_name=class_name,
                     sig_generators=sig_generators,
+                    include_docstrings=include_docstrings,
                 )
         elif is_c_property(value):
             done.add(attr)
@@ -489,7 +521,13 @@ def generate_c_type_stub(
             )
         elif is_c_type(value):
             generate_c_type_stub(
-                module, attr, value, types, imports=imports, sig_generators=sig_generators
+                module,
+                attr,
+                value,
+                types,
+                imports=imports,
+                sig_generators=sig_generators,
+                include_docstrings=include_docstrings,
             )
             done.add(attr)
 

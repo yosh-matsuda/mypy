@@ -1003,6 +1003,8 @@ class ASTConverter:
             # FuncDef overrides set_line -- can't use self.set_line
             func_def.set_line(lineno, n.col_offset, end_line, end_column)
             retval = func_def
+        if self.options.include_docstrings:
+            func_def.docstring = ast3.get_docstring(n, clean=False)
         self.class_and_function_stack.pop()
         return retval
 
@@ -1119,6 +1121,8 @@ class ASTConverter:
         else:
             cdef.line = n.lineno
             cdef.deco_line = n.decorator_list[0].lineno if n.decorator_list else None
+        if self.options.include_docstrings:
+            cdef.docstring = ast3.get_docstring(n, clean=False)
         cdef.column = n.col_offset
         cdef.end_line = getattr(n, "end_lineno", None)
         cdef.end_column = getattr(n, "end_col_offset", None)
