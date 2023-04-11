@@ -297,7 +297,6 @@ def generate_c_function_stub(
     'class_sigs'.
     """
     inferred: list[FunctionSig] | None = None
-    docstr: str | None = getattr(obj, "__doc__", None) if include_docstrings else None
     if class_name:
         # method:
         assert self_var is not None, "self_var should be provided for methods"
@@ -327,6 +326,7 @@ def generate_c_function_stub(
     if is_overloaded:
         imports.append("from typing import overload")
     if inferred:
+        docstr: str | None = getattr(obj, "__doc__", None) if include_docstrings else None
         for signature in inferred:
             args: list[str] = []
             for arg in signature.args:
@@ -349,25 +349,28 @@ def generate_c_function_stub(
                 output.append("@overload")
             if is_classmethod:
                 output.append("@classmethod")
-            if docstr:
-                output.append(
-                    "def {function}({args}) -> {ret}:".format(
-                        function=name,
-                        args=", ".join(args),
-                        ret=strip_or_import(signature.ret_type, module, imports),
+            if docstr and signature is inferred[-1]:
+                docstr_split = docstr.strip().split("\n\n")
+                # skip docstring signature of the 1st paragraph
+                if len(docstr_split) > 1:
+                    output.append(
+                        "def {function}({args}) -> {ret}:".format(
+                            function=name,
+                            args=", ".join(args),
+                            ret=strip_or_import(signature.ret_type, module, imports),
+                        )
                     )
+                    docstr_quoted = mypy.util.quote_docstring("\n\n".join(docstr_split[1:]) + "\n")
+                    docstr_indented = "\n    ".join(docstr_quoted.split("\n"))
+                    output.extend(f"    {docstr_indented}".split("\n"))
+                    continue
+            output.append(
+                "def {function}({args}) -> {ret}: ...".format(
+                    function=name,
+                    args=", ".join(args),
+                    ret=strip_or_import(signature.ret_type, module, imports),
                 )
-                docstr_quoted = mypy.util.quote_docstring(docstr.strip())
-                docstr_indented = "\n    ".join(docstr_quoted.split("\n"))
-                output.extend(f"    {docstr_indented}".split("\n"))
-            else:
-                output.append(
-                    "def {function}({args}) -> {ret}: ...".format(
-                        function=name,
-                        args=", ".join(args),
-                        ret=strip_or_import(signature.ret_type, module, imports),
-                    )
-                )
+            )
 
 
 def strip_or_import(typ: str, module: ModuleType, imports: list[str]) -> str:
