@@ -400,7 +400,7 @@ def strip_or_import(typ: str, module: ModuleType, imports: list[str]) -> str:
             stripped_type = re.sub(r"(^|[\[, ]+)" + re.escape(module.__name__ + "."), r"\1", typ)
     elif module and typ.startswith(module.__name__ + "."):
         stripped_type = typ[len(module.__name__) + 1 :]
-    elif "." in typ:
+    elif "." in typ and any(c != "." for c in typ):
         arg_module = typ[: typ.rindex(".")]
         if arg_module == "builtins":
             stripped_type = typ[len("builtins") + 1 :]
