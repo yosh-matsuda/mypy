@@ -342,7 +342,6 @@ def generate_c_function_stub(
     'class_sigs'.
     """
     inferred: list[FunctionSig] | None = None
-    docstr: str | None = getattr(obj, "__doc__", None) if include_docstrings else None
     if class_name:
         # method:
         assert cls is not None, "cls should be provided for methods"
@@ -374,6 +373,7 @@ def generate_c_function_stub(
     if is_overloaded:
         imports.append("from typing import overload")
     if inferred:
+        docstr: str | None = getattr(obj, "__doc__", None) if include_docstrings else None
         for signature in inferred:
             args: list[str] = []
             for arg in signature.args:
@@ -399,14 +399,18 @@ def generate_c_function_stub(
                 args=", ".join(args),
                 ret=strip_or_import(signature.ret_type, module, known_modules, imports),
             )
-            if include_docstrings and docstr:
-                docstr_quoted = mypy.util.quote_docstring(docstr.strip())
-                docstr_indented = "\n    ".join(docstr_quoted.split("\n"))
-                output.append(output_signature)
-                output.extend(f"    {docstr_indented}".split("\n"))
-            else:
-                output_signature += " ..."
-                output.append(output_signature)
+            # add docstring to only the last signature
+            if include_docstrings and docstr and signature is inferred[-1]:
+                docstr_split = docstr.strip().split("\n\n")
+                # skip docstring signature of the 1st paragraph
+                if len(docstr_split) > 1:
+                    docstr_quoted = mypy.util.quote_docstring("\n\n".join(docstr_split[1:]).strip() + "\n")
+                    docstr_indented = "\n    ".join(docstr_quoted.split("\n"))
+                    output.append(output_signature)
+                    output.extend(f"    {docstr_indented}".split("\n"))
+                    continue
+            output_signature += " ..."
+            output.append(output_signature)
 
 
 def strip_or_import(
