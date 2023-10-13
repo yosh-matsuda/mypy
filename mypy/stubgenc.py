@@ -374,7 +374,15 @@ def generate_c_function_stub(
         imports.append("from typing import overload")
     if inferred:
         docstr: str | None = getattr(obj, "__doc__", None) if include_docstrings else None
-        for signature in inferred:
+        uniq_signatures: list[FunctionSig] = []
+        for i in inferred:
+            for arg in i.args:
+                if "\\" in arg.name:    # Skip arg contains \\
+                    break
+            else:
+                if i not in uniq_signatures:
+                    uniq_signatures.append(i)
+        for signature in uniq_signatures:
             args: list[str] = []
             for arg in signature.args:
                 arg_def = arg.name
@@ -400,7 +408,7 @@ def generate_c_function_stub(
                 ret=strip_or_import(signature.ret_type, module, known_modules, imports),
             )
             # add docstring to only the last signature
-            if include_docstrings and docstr and signature is inferred[-1]:
+            if include_docstrings and docstr and signature is uniq_signatures[-1]:
                 docstr_split = docstr.strip().split("\n\n")
                 # skip docstring signature of the 1st paragraph
                 if len(docstr_split) > 1:
