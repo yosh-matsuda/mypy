@@ -163,13 +163,14 @@ class DocStringParser:
                 self.arg_type = self.accumulator
                 self.state.pop()
             elif self.state[-1] == STATE_ARGUMENT_LIST:
-                self.arg_name = self.accumulator
-                if not (
-                    token.string == ")" and self.accumulator.strip() == ""
-                ) and not _ARG_NAME_RE.match(self.arg_name):
-                    # Invalid argument name.
-                    self.reset()
-                    return
+                if not self.accumulator == "/":
+                    self.arg_name = self.accumulator
+                    if not (
+                        token.string == ")" and self.accumulator.strip() == ""
+                    ) and not _ARG_NAME_RE.match(self.arg_name):
+                        # Invalid argument name.
+                        self.reset()
+                        return
 
             if token.string == ")":
                 self.state.pop()

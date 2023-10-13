@@ -38,6 +38,7 @@ _DEFAULT_TYPING_IMPORTS: Final = (
     "Optional",
     "Tuple",
     "Union",
+    "Sequence",
 )
 
 
@@ -194,7 +195,7 @@ def generate_stub_for_c_module(
     done = set()
     items = sorted(get_members(module), key=lambda x: x[0])
     for name, obj in items:
-        if is_c_function(obj):
+        if is_c_function(obj) or is_nanobind_function(obj):
             generate_c_function_stub(
                 module,
                 name,
@@ -305,6 +306,14 @@ def is_c_property_readonly(prop: Any) -> bool:
 
 def is_c_type(obj: object) -> bool:
     return inspect.isclass(obj) or type(obj) is type(int)
+
+
+def is_nanobind_function(obj: object) -> bool:
+    return (
+        hasattr(type(obj), "__module__")
+        and type(obj).__module__ == "nanobind"
+        and type(obj).__name__ == "nb_func"
+    )
 
 
 def is_pybind11_overloaded_function_docstring(docstr: str, name: str) -> bool:
