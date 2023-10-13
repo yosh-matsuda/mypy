@@ -479,6 +479,7 @@ def generate_c_property_stub(
     module: ModuleType | None = None,
     known_modules: list[str] | None = None,
     imports: list[str] | None = None,
+    include_docstrings: bool = False,
 ) -> None:
     """Generate property stub using introspection of 'obj'.
 
@@ -507,16 +508,30 @@ def generate_c_property_stub(
     if module is not None and imports is not None and known_modules is not None:
         inferred = strip_or_import(inferred, module, known_modules, imports)
 
+    docstr: str | None = getattr(obj, "__doc__", None) if include_docstrings else None
     if is_static_property(obj):
         trailing_comment = "  # read-only" if readonly else ""
         static_properties.append(f"{name}: ClassVar[{inferred}] = ...{trailing_comment}")
+        if docstr:
+            docstr_quoted = mypy.util.quote_docstring(docstr.strip() + "\n")
+            docstr_indented = "\n".join(docstr_quoted.split("\n"))
+            static_properties.extend(f"{docstr_indented}".split("\n"))
     else:  # regular property
         if readonly:
             ro_properties.append("@property")
-            ro_properties.append(f"def {name}(self) -> {inferred}: ...")
+            if docstr:
+                ro_properties.append(f"def {name}(self) -> {inferred}:")
+                docstr_quoted = mypy.util.quote_docstring(docstr.strip() + "\n")
+                docstr_indented = "\n    ".join(docstr_quoted.split("\n"))
+                ro_properties.extend(f"    {docstr_indented}".split("\n"))
+            else:
+                ro_properties.append(f"def {name}(self) -> {inferred}: ...")
         else:
             rw_properties.append(f"{name}: {inferred}")
-
+            if docstr:
+                docstr_quoted = mypy.util.quote_docstring(docstr.strip() + "\n")
+                docstr_indented = "\n".join(docstr_quoted.split("\n"))
+                rw_properties.extend(f"{docstr_indented}".split("\n"))
 
 def generate_c_type_stub(
     module: ModuleType,
@@ -582,6 +597,7 @@ def generate_c_type_stub(
                 module=module,
                 known_modules=known_modules,
                 imports=imports,
+                include_docstrings=include_docstrings,
             )
         elif is_c_type(value):
             generate_c_type_stub(
