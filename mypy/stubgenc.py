@@ -449,7 +449,7 @@ def strip_or_import(
                     r"\1" + stripped_subtyp + r"\2",
                     stripped_type,
                 )
-    elif "." in typ:
+    elif "." in typ and any(c != "." for c in typ):
         for module_name in local_modules + list(reversed(known_modules)):
             if typ.startswith(module_name + "."):
                 if module_name in local_modules:

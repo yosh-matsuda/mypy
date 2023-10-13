@@ -17,7 +17,7 @@ from typing_extensions import TypeAlias as _TypeAlias
 Sig: _TypeAlias = Tuple[str, str]
 
 
-_TYPE_RE: Final = re.compile(r"^[a-zA-Z_][\w\[\], ]*(\.[a-zA-Z_][\w\[\], ]*)*$")
+_TYPE_RE: Final = re.compile(r"^[a-zA-Z_]([\w\[\], ]|\.{3})*((\.[a-zA-Z_][\w\[\], ]*)|\.{3}\])*$")
 _ARG_NAME_RE: Final = re.compile(r"\**[A-Za-z_][A-Za-z0-9_]*$")
 
 
