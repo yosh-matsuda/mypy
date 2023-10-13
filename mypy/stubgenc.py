@@ -342,7 +342,7 @@ def generate_c_function_stub(
     'class_sigs'.
     """
     inferred: list[FunctionSig] | None = None
-    docstr: str | None = None
+    docstr: str | None = getattr(obj, "__doc__", None) if include_docstrings else None
     if class_name:
         # method:
         assert cls is not None, "cls should be provided for methods"
